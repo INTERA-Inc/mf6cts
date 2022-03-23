@@ -1255,7 +1255,7 @@ def test_five_spotish_api_maw_configfile():
     shutil.copy2(lib_name, os.path.join(simt_ws, os.path.split(lib_name)[-1]))
 
     # first copy the mf6cts.py file to this dir
-    src_file = os.path.join("..", "code", "mf6cts.py")
+    src_file = os.path.join("..", "mf6cts", "mf6cts.py")
     dest_file = "mf6cts.py"
     if os.path.exists(dest_file):
         os.remove(dest_file)
@@ -1378,7 +1378,7 @@ def test_five_spotish_api_maw_configfile_unbalanced():
     shutil.copy2(lib_name, os.path.join(simt_ws, os.path.split(lib_name)[-1]))
 
     # first copy the mf6cts.py file to this dir
-    src_file = os.path.join("..", "code", "mf6cts.py")
+    src_file = os.path.join("..", "mf6cts", "mf6cts.py")
     dest_file = "mf6cts.py"
     if os.path.exists(dest_file):
         os.remove(dest_file)
@@ -1955,7 +1955,7 @@ def setup_pst():
         f.write("is_structured=True\n")
         f.write("flow_output_files=['gwf.hds','gwf.bud']\n")
         f.write("balance_flows=False\n ")
-    shutil.copy2(os.path.join("..", "code", "mf6cts.py"), os.path.join(t_d, "mf6cts.py"))
+    shutil.copy2(os.path.join("..", "mf6cts", "mf6cts.py"), os.path.join(t_d, "mf6cts.py"))
     pyemu.os_utils.run("python mf6cts.py config_file.py", cwd=t_d)
     invest_run(t_d)
 
