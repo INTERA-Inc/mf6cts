@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: tests - ifort
+name: mf6cts tests
 
 on:
   schedule:
