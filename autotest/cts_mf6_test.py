@@ -24,7 +24,7 @@ else:
     mt3d_bin = os.path.join("..", "bin", "win", "mt3dusgs.exe")
     mf6_bin = os.path.join("..", "bin", "win", "mf6.exe")
 
-sys.path.append(os.path.join("..", "code"))
+sys.path.append(os.path.join("..", "mf6cts"))
 
 nrowncol = 33
 # number of layers
@@ -2526,7 +2526,7 @@ if __name__ == "__main__":
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
 
-    #test_five_spotish_api()
+    test_five_spotish_api()
 
     # plot("fivespot_t", "fivespot")
     # plot("fivespot_t_api", "fivespot_api")
@@ -2541,8 +2541,8 @@ if __name__ == "__main__":
     #test_five_spotish_api_maw_configfile()
     # plot_domain("fivespot_api")
     # plot_results_pub("fivespot_t_api", "fivespot_api")
-    setup_pst()
-    plot_prior_mc()
+    #setup_pst()
+    #plot_prior_mc()
 
     # create_mt3dusgs("fivespot_api","fivespot_t_api")
     # pyemu.os_utils.run("./mt3dusgs mt3dtest.nam".format(os.path.split(mt3d_bin)[-1]), cwd="fivespot_t_api_mt")
