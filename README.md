@@ -5,7 +5,7 @@ The contaminant treatment system (CTS) package is contained in the `\mf6cts\mf6c
 ## testing
 
 
-![CI workflow](https://github.com/INTERA-Inc/mf6cts/actions/workflows/ci-tests-ifort.yml/badge.svg)
+![CI workflow](https://github.com/INTERA-Inc/mf6cts/actions/workflows/ci.yml/badge.svg)
 
 
 ## basic user information
