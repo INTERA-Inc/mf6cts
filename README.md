@@ -41,20 +41,33 @@ component. For MAW-type components, the indexing information is the
 
 Below is an example CTS input file:
 
-`begin period 2 cts 1 efficiency 0.361 ` `wel wel_0 out 3 21 21 `
-`wel wel_0 out 3 21 23 ` `maw maw_0 out 2 ` `wel wel_0 in 1 1 1 `
-`maw maw_0 in 1 ` `end period 2 cts 1 `
-
-`begin period 2 cts 2 efficiency 0.909 ` `wel wel_0 out 3 20 3 `
-`wel wel_0 in 1 33 1 ` `wel wel_0 in 1 33 33 ` `wel wel_0 in 1 1 33 `
-`end period 2 cts 2 `
-
-`begin period 5 cts 1 efficiency 0.925 ` `maw maw_0 out 2 `
-`maw maw_0 in 1 ` `end period 3 cts 1 `
-
-`begin period 7 cts 2 efficiency 0.222 ` `wel wel_0 out 3 20 3 `
-`wel wel_0 in 1 33 1 ` `wel wel_0 in 1 33 33 ` `wel wel_0 in 1 1 33 `
-`end period 3 cts 2 `
+`begin period 2 cts 1 efficiency 0.361 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 out 3 21 21 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 out 3 21 23 `   
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`maw maw_0 out 2 `   
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 in 1 1 1 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`maw maw_0 in 1 `   
+`end period 2 cts 1 `  
+  
+`begin period 2 cts 2 efficiency 0.909 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 out 3 20 3 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 in 1 33 1 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 in 1 33 33 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 in 1 1 33 `  
+`end period 2 cts 2 `  
+  
+`begin period 5 cts 1 efficiency 0.925 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`maw maw_0 out 2 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`maw maw_0 in 1 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`end period 3 cts 1 `  
+  
+`begin period 7 cts 2 efficiency 0.222 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 out 3 20 3 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 in 1 33 1 `  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 in 1 33 33 `   
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`wel wel_0 in 1 1 33 `  
+`end period 3 cts 2 `  
+  
 
 In this example file, we see that for stress period 2, CTS instance "1"
 has three extraction wells and one injection well, while CTS instance
@@ -88,10 +101,13 @@ simple python source file listing the required arguments:
 
 An example configuration file:
 
-`cts_filename=’model.cts’ ` `lib_name=’libmf6.so’ `
-`transport_dir=’fivespot_maw_t_api’ ` `flow_dir=’fivespot_maw_api’ `
-`is_structured=True `
-`flow_output_files=[’gwf.hds’,’gwf.bud’,’gwf.maw.bud’] `
+`cts_filename=’model.cts’`   
+`lib_name=’libmf6.so’ `    
+`transport_dir=’fivespot_maw_t_api’ `  
+`flow_dir=’fivespot_maw_api’ `   
+`is_structured=True `  
+`flow_output_files=[’gwf.hds’,’gwf.bud’,’gwf.maw.bud’] `  
+  
 
 The MODFLOW 6 CTS package write several comma-separated-value (CSV)
 files summarizing the performance of the CTS system for the both the
