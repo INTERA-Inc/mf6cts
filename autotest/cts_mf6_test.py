@@ -142,16 +142,17 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
                 wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
                 wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
 
-            elif ghb_source:
-                wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
-                wel_data.append([(nlay - 1, nrowncol - 1, int(nrowncol / 2)), sys_rate / 3, 0.0])
-                wel_data.append([(nlay - 1, nrowncol - 1, nrowncol - 1), sys_rate / 3, 0.0])
-                wel_data.append([(nlay - 1, 0, nrowncol - 1), sys_rate / 3, 0.0])
             else:
-                wel_data.append([(nlay - 1, 0, 0), sys_rate, 0.0])
-                wel_data.append([(nlay - 1, nrowncol - 1, 0), sys_rate / 3, 0.0])
-                wel_data.append([(nlay - 1, nrowncol - 1, nrowncol - 1), sys_rate / 3, 0.0])
-                wel_data.append([(nlay - 1, 0, nrowncol - 1), sys_rate / 3, 0.0])
+                if ghb_source:
+                    wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
+                    wel_data.append([(nlay - 1, nrowncol - 1, int(nrowncol / 2)), sys_rate / 3, 0.0])
+                    wel_data.append([(nlay - 1, nrowncol - 1, nrowncol - 1), sys_rate / 3, 0.0])
+                    wel_data.append([(nlay - 1, 0, nrowncol - 1), sys_rate / 3, 0.0])
+                else:
+                    wel_data.append([(nlay - 1, 0, 0), sys_rate, 0.0])
+                    wel_data.append([(nlay - 1, nrowncol - 1, 0), sys_rate / 3, 0.0])
+                    wel_data.append([(nlay - 1, nrowncol - 1, nrowncol - 1), sys_rate / 3, 0.0])
+                    wel_data.append([(nlay - 1, 0, nrowncol - 1), sys_rate / 3, 0.0])
 
             # if i % 3 == 0:
             #    for iwd,wd in enumerate(wel_data):
@@ -160,9 +161,12 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
             wel_sp_data[i + 1] = wel_data
 
             # fill the cts containers - splitting up the ext and inj wells into two systems
-
-            cts_1[i + 2] = [wel_data[0], wel_data[2]]
-            cts_2[i + 2] = [wel_data[1], wel_data[3]]
+            if shared_inj:
+                cts_1[i + 2] = [wel_data[0], wel_data[2]]
+                cts_2[i + 2] = [wel_data[1], wel_data[3]]
+            else:
+                cts_1[i + 2] = [wel_data[0], wel_data[2]]
+                cts_2[i + 2] = [wel_data[1], wel_data[3],wel_data[4],wel_data[5]]
             # cts_1[i+2] = wel_data
     else:
 
@@ -2655,6 +2659,6 @@ if __name__ == "__main__":
     # pyemu.os_utils.run("./mt3dusgs mt3dtest.nam".format(os.path.split(mt3d_bin)[-1]), cwd="fivespot_t_api_mt")
     # test_five_spotish_simple_api_off()
     # test_five_spotish_simple_api_off2()
-    #test_five_spotish_api()
-    test_five_spotish_api_shared_inj()
+    test_five_spotish_api()
+    #test_five_spotish_api_shared_inj()
 
