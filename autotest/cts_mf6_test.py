@@ -2649,7 +2649,7 @@ if __name__ == "__main__":
     # test_five_spotish_api_maw_complex()
     # plot("fivespot_maw_t", "fivespot_maw")
     # plot("fivespot_maw_t_api", "fivespot_maw_api")
-    #test_five_spotish_api_maw_configfile()
+    test_five_spotish_api_maw_configfile()
     # plot_domain("fivespot_api")
     # plot_results_pub("fivespot_t_api", "fivespot_api")
     #setup_pst()
@@ -2659,6 +2659,6 @@ if __name__ == "__main__":
     # pyemu.os_utils.run("./mt3dusgs mt3dtest.nam".format(os.path.split(mt3d_bin)[-1]), cwd="fivespot_t_api_mt")
     # test_five_spotish_simple_api_off()
     # test_five_spotish_simple_api_off2()
-    test_five_spotish_api()
+    #test_five_spotish_api()
     #test_five_spotish_api_shared_inj()
 

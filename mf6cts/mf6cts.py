@@ -1393,8 +1393,9 @@ def main():
             shutil.copy2(os.path.join(config_module.flow_dir, flow_output_file),
                          os.path.join(config_module.transport_dir, flow_output_file))
 
+    solve_gwt = True
     if hasattr(config_module, "solve_gwt"):
-        solve_gwf = bool(config_module.solve_gwt)
+        solve_gwt = bool(config_module.solve_gwt)
     if solve_gwt:
         mf6.solve_gwt()
 
