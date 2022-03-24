@@ -2631,6 +2631,156 @@ def test_five_spotish_api_shared_inj():
     print(d)
     assert d < 1.0e-10
 
+
+def test_five_spotish_api_maw_configfile_staggered():
+    """Test MAW with the config file usage by solving flow then transport in steps
+
+    """
+
+    from mf6cts import Mf6Cts
+
+    # the mf6 library
+
+    # lib_name = "libmf6.so"
+    # lib_path = os.path.join(".", lib_name)
+    # the model files directory
+    org_sim_ws = "fivespot"
+    np.random.seed(111)
+    setup_five_spotish(plot=False, sim_ws=org_sim_ws, nlay=1)
+    convert_5spot_to_maw("fivespot", nlay=1)
+    org_sim_ws = org_sim_ws + "_maw"
+    sim_ws = org_sim_ws + "_api"
+    if os.path.exists(sim_ws):
+        shutil.rmtree(sim_ws)
+    shutil.copytree(org_sim_ws, sim_ws)
+    shutil.copy2(lib_name, os.path.join(sim_ws, os.path.split(lib_name)[-1]))
+
+    # this dir should have been created with the call to setup_five_spotish()
+    org_simt_ws = org_sim_ws + "_t"
+    assert os.path.exists(org_simt_ws), org_simt_ws
+
+    simt_ws = org_simt_ws + "_api"
+    if os.path.exists(simt_ws):
+        shutil.rmtree(simt_ws)
+    shutil.copytree(org_simt_ws, simt_ws)
+    shutil.copy2(lib_name, os.path.join(simt_ws, os.path.split(lib_name)[-1]))
+
+    # first copy the mf6cts.py file to this dir
+    src_file = os.path.join("..", "mf6cts", "mf6cts.py")
+    dest_file = "mf6cts.py"
+    if os.path.exists(dest_file):
+        os.remove(dest_file)
+    shutil.copy2(src_file, dest_file)
+
+    # now write a config file
+    config_file = "config_file.py"
+    if os.path.exists(config_file):
+        os.remove(config_file)
+    with open(config_file, 'w') as f:
+        f.write("cts_filename='{0}'\n".format("model.cts"))
+        f.write("lib_name='{0}'\n".format(os.path.split(lib_name)[-1]))
+        f.write("transport_dir='{0}'\n".format(simt_ws))
+        f.write("flow_dir='{0}'\n".format(sim_ws))
+        f.write("is_structured=True\n")
+        f.write("flow_output_files=['gwf.hds','gwf.bud','gwf.maw.bud']\n")
+        f.write("solve_gwf=True\n")
+        f.write("transfer_flow_output_files=True\n")
+        f.write("solve_gwt=False\n")
+
+    for fname in ['gwf.hds', 'gwf.bud', 'gwf.maw.bud']:
+        if os.path.exists(os.path.join(simt_ws, fname)):
+            os.remove(os.path.join(simt_ws, fname))
+
+    os.system("python mf6cts.py config_file.py")
+    #os.remove(dest_file)
+
+    api_lst = flopy.utils.Mf6ListBudget(os.path.join(sim_ws, gwfname + ".lst"))
+    api_inc, api_cum = api_lst.get_dataframes(diff=True)
+    lst = flopy.utils.Mf6ListBudget(os.path.join(org_sim_ws, gwfname + ".lst"))
+    inc, cum = lst.get_dataframes(diff=True)
+
+    print(api_cum.iloc[-1, :])
+    print(cum.iloc[-1, :])
+    # assert np.abs(cum.loc[cum.index[-1], "maw"]) > np.abs(api_cum.loc[api_cum.index[-1], "maw"])
+    abs_fr_diff = np.abs(api_cum.loc[api_cum.index[-1], "maw"]) / np.abs(cum.loc[cum.index[-1], "maw"])
+    assert abs_fr_diff < 0.025, abs_fr_diff
+
+    node_df = pd.read_csv(os.path.join(sim_ws, "gwf_cts_flow_node_summary.csv"))
+    node_df = node_df.loc[node_df.requested_rate > 0, :]
+    d = (node_df.requested_rate - node_df.actual_rate).apply(np.abs).sum()
+    print(d)
+    assert d > 1000
+
+
+
+    # make sure the gwt stuff is empty
+    node_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_node_summary.csv"))
+    assert node_df.shape[0] == 0
+
+    # now write a config file for only solving gwt
+    config_file = "config_file.py"
+    if os.path.exists(config_file):
+        os.remove(config_file)
+    with open(config_file, 'w') as f:
+        f.write("cts_filename='{0}'\n".format("model.cts"))
+        f.write("lib_name='{0}'\n".format(os.path.split(lib_name)[-1]))
+        f.write("transport_dir='{0}'\n".format(simt_ws))
+        f.write("flow_dir='{0}'\n".format(sim_ws))
+        f.write("is_structured=True\n")
+        f.write("flow_output_files=['gwf.hds','gwf.bud','gwf.maw.bud']\n")
+        f.write("solve_gwf=False\n")
+        f.write("transfer_flow_output_files=False\n")
+        f.write("solve_gwt=True\n")
+
+    os.system("python mf6cts.py config_file.py")
+    os.remove(dest_file)
+
+    api_lst = Mf6TListBudget(os.path.join(simt_ws, gwtname + ".lst"))
+    api_inc, api_cum = api_lst.get_dataframes(diff=False)
+    print(api_cum.iloc[-1, :])
+
+    node_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_node_summary.csv"))
+    in_node_mass = node_df.loc[
+                   node_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == node_df.stress_period.max(), axis=1),
+                   :].cum_mass.sum()
+
+    out_node_mass = node_df.loc[
+                    node_df.apply(lambda x: x.cum_vol < 0 and x.stress_period == node_df.stress_period.max(), axis=1),
+                    :].cum_mass.sum()
+    print(in_node_mass, out_node_mass)
+    abs_frac_diff = np.abs((in_node_mass - out_node_mass) / in_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    abs_frac_diff = np.abs((in_node_mass - api_cum.MWT_IN.max()) / in_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    abs_frac_diff = np.abs((out_node_mass - api_cum.MWT_IN.max()) / out_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    sys_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_system_summary.csv"))
+    in_node_mass = sys_df.loc[
+                   sys_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == sys_df.stress_period.max(), axis=1),
+                   :].cum_mass_injected.sum()
+
+    out_node_mass = sys_df.loc[
+                    sys_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == sys_df.stress_period.max(), axis=1),
+                    :].cum_mass_removed.sum()
+
+    abs_frac_diff = np.abs((in_node_mass - out_node_mass) / in_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01, abs_frac_diff
+
+    abs_frac_diff = np.abs((in_node_mass - api_cum.MWT_IN.max()) / in_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    abs_frac_diff = np.abs((out_node_mass - api_cum.MWT_IN.max()) / out_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
 if __name__ == "__main__":
     # test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
@@ -2649,7 +2799,7 @@ if __name__ == "__main__":
     # test_five_spotish_api_maw_complex()
     # plot("fivespot_maw_t", "fivespot_maw")
     # plot("fivespot_maw_t_api", "fivespot_maw_api")
-    test_five_spotish_api_maw_configfile()
+    test_five_spotish_api_maw_configfile_staggered()
     # plot_domain("fivespot_api")
     # plot_results_pub("fivespot_t_api", "fivespot_api")
     #setup_pst()
