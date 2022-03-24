@@ -65,7 +65,8 @@ class Mf6TListBudget(flopy.utils.mflistfile.ListBudget):
 
 
 def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1=0.75, eff2=0.95,
-                       balance_inout=False, nlay=NLAY, simple_eff=False, ghb_source=False, simple_hk=True):
+                       balance_inout=False, nlay=NLAY, simple_eff=False, ghb_source=False, simple_hk=True,
+                       shared_inj=False):
     """create and run a separate flow and tranport sim with
 	multiple interior extraction wells and 4 corner injectors.  requires
 	the MODFLOW-6 binary to run the model(s)
@@ -137,7 +138,11 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
 
             #
             # # now add the injectors
-            if ghb_source:
+            if shared_inj:
+                wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
+                wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
+
+            elif ghb_source:
                 wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
                 wel_data.append([(nlay - 1, nrowncol - 1, int(nrowncol / 2)), sys_rate / 3, 0.0])
                 wel_data.append([(nlay - 1, nrowncol - 1, nrowncol - 1), sys_rate / 3, 0.0])
@@ -156,8 +161,8 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
 
             # fill the cts containers - splitting up the ext and inj wells into two systems
 
-            cts_1[i + 2] = [wel_data[0], wel_data[2], ]
-            cts_2[i + 2] = [wel_data[1], wel_data[4], wel_data[5], wel_data[3]]
+            cts_1[i + 2] = [wel_data[0], wel_data[2]]
+            cts_2[i + 2] = [wel_data[1], wel_data[3]]
             # cts_1[i+2] = wel_data
     else:
 
@@ -2520,13 +2525,110 @@ def test_five_spotish_simple_api_off2():
     assert 6 not in sys_df.stress_period.astype(int).values
 
 
+def test_five_spotish_api_shared_inj():
+    """a basic test of the cts
+
+    """
+
+    from mf6cts import Mf6Cts
+
+    # the mf6 library
+
+    # lib_name = "libmf6.so"
+    # lib_path = os.path.join(".", lib_name)
+    # the model files directory
+    org_sim_ws = "fivespot"
+    np.random.seed(111)
+
+    setup_five_spotish(plot=False, sim_ws=org_sim_ws, eff1=0.7,eff2=0.7, simple_eff=True, nlay=1,
+                       ghb_source=100,
+                       simple_pattern=True, simple_hk=True,shared_inj=True)
+
+    sim_ws = org_sim_ws + "_api"
+    if os.path.exists(sim_ws):
+        shutil.rmtree(sim_ws)
+    shutil.copytree(org_sim_ws, sim_ws)
+    shutil.copy2(lib_name, os.path.join(sim_ws, os.path.split(lib_name)[-1]))
+
+    # this dir should have been created with the call to setup_five_spotish()
+    org_simt_ws = org_sim_ws + "_t"
+    assert os.path.exists(org_simt_ws), org_simt_ws
+
+    simt_ws = org_simt_ws + "_api"
+    if os.path.exists(simt_ws):
+        shutil.rmtree(simt_ws)
+    shutil.copytree(org_simt_ws, simt_ws)
+    shutil.copy2(lib_name, os.path.join(simt_ws, os.path.split(lib_name)[-1]))
+
+    flow_budget_file = "gwf.bud"
+    # shutil.copy2(os.path.join(sim_ws,flow_budget_file),os.path.join(simt_ws,flow_budget_file))
+
+    mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
+                 is_structured=True)
+
+    mf6.solve_gwf()
+    shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
+    shutil.copy2(os.path.join(sim_ws, "gwf.bud"), os.path.join(simt_ws, "gwf.bud"))
+    mf6.solve_gwt()
+    mf6.finalize()
+
+    mf6 = None
+    api_lst = flopy.utils.Mf6ListBudget(os.path.join(sim_ws, gwfname + ".lst"))
+    api_inc, api_cum = api_lst.get_dataframes(diff=True)
+    lst = flopy.utils.Mf6ListBudget(os.path.join(org_sim_ws, gwfname + ".lst"))
+    inc, cum = lst.get_dataframes(diff=True)
+
+    api_lst = Mf6TListBudget(os.path.join(simt_ws, gwtname + ".lst"))
+    api_inc, api_cum = api_lst.get_dataframes(diff=False)
+    print(api_cum.iloc[-1, :])
+
+    node_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_node_summary.csv"))
+    in_node_mass = node_df.loc[
+                   node_df.apply(lambda x: x.cum_vol > 0, axis=1),
+                   :].mass.sum()
+    out_node_mass = node_df.loc[node_df.apply(lambda x: x.cum_vol < 0, axis=1),
+                    :].mass.sum()
+    abs_frac_diff = np.abs((in_node_mass - api_cum.WEL_IN.max()) / in_node_mass)
+    print(abs_frac_diff)
+    if in_node_mass != 0.0:
+        assert abs_frac_diff < 0.01
+
+    sys_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_system_summary.csv"))
+    in_node_mass = sys_df.loc[
+                   sys_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == sys_df.stress_period.max(), axis=1),
+                   :].cum_mass_injected.sum()
+
+    out_node_mass = sys_df.loc[
+                    sys_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == sys_df.stress_period.max(), axis=1),
+                    :].cum_mass_removed.sum()
+
+    eff = sys_df.mass_treated / sys_df.mass_removed
+    d = (eff - sys_df.requested_efficiency).apply(np.abs)
+    print(d)
+    assert d.max() < 1.0e-10
+
+    d = (sys_df.mass_removed - (sys_df.mass_treated + sys_df.mass_injected)).apply(np.abs)
+    print(d)
+
+    wel_df = pd.read_csv(os.path.join(sim_ws,"gwf.wel_stress_period_data_2.txt"),header=None,delim_whitespace=True,names=["l","r","c","flux","concen"])
+    print(wel_df)
+
+    node_df = pd.read_csv(os.path.join(sim_ws, "gwf_cts_flow_node_summary.csv"))
+    cts_vals = node_df.loc[node_df.stress_period==2,"requested_rate"]
+    cts_vals.values.sort()
+    wel_vals = wel_df.flux.values
+    wel_vals.sort()
+    d = np.abs(wel_vals - cts_vals).sum()
+    print(d)
+    assert d < 1.0e-10
+
 if __name__ == "__main__":
     # test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
 
-    test_five_spotish_api()
+    #test_five_spotish_api()
 
     # plot("fivespot_t", "fivespot")
     # plot("fivespot_t_api", "fivespot_api")
@@ -2548,3 +2650,6 @@ if __name__ == "__main__":
     # pyemu.os_utils.run("./mt3dusgs mt3dtest.nam".format(os.path.split(mt3d_bin)[-1]), cwd="fivespot_t_api_mt")
     # test_five_spotish_simple_api_off()
     # test_five_spotish_simple_api_off2()
+
+    test_five_spotish_api_shared_inj()
+

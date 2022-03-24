@@ -1346,12 +1346,25 @@ def main():
     if hasattr(config_module,"balance_flows"):
         for cts_num,cts_instance in mf6._cts_instances.items():
             cts_instance._balance_flows = config_module.balance_flows
+    solve_gwf = True
+    if hasattr(config_module,"solve_gwf"):
+        solve_gwf = bool(config_module.solve_gwf)
+    if solve_gwf:
+        mf6.solve_gwf()
 
-    mf6.solve_gwf()
-    for flow_output_file in config_module.flow_output_files:
-        shutil.copy2(os.path.join(config_module.flow_dir, flow_output_file),
-                     os.path.join(config_module.transport_dir, flow_output_file))
-    mf6.solve_gwt()
+    transfer_flow_output_files = True
+    if hasattr(config_module,"transfer_flow_output_files"):
+        transfer_flow_output_files = bool(config_module.transfer_flow_output_files)
+    if transfer_flow_output_files:
+        for flow_output_file in config_module.flow_output_files:
+            shutil.copy2(os.path.join(config_module.flow_dir, flow_output_file),
+                         os.path.join(config_module.transport_dir, flow_output_file))
+
+    if hasattr(config_module, "solve_gwt"):
+        solve_gwf = bool(config_module.solve_gwt)
+    if solve_gwt:
+        mf6.solve_gwt()
+
     mf6.finalize()
 
 
