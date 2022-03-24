@@ -2570,6 +2570,7 @@ def test_five_spotish_api_shared_inj():
     else:
         raise Exception("should have failed")
 
+
     mf6.solve_gwf()
     shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
     shutil.copy2(os.path.join(sim_ws, "gwf.bud"), os.path.join(simt_ws, "gwf.bud"))
