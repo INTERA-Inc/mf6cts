@@ -88,7 +88,13 @@ class CtsRecord(object):
         self.pakname = pakname.lower()
         self.instance = instance.lower()
         self.extra = extra
+        self.occurence = 0
 
+    def get_tuple(self):
+        return tuple([self.index,self.inout,self.pakname,self.instance])
+
+    def get_tuple_wo_instance(self):
+        return tuple([self.index,self.inout,self.pakname])
 
 class CtsSystem(object):
     """class representing stress-period specific CTS system blocks
@@ -163,6 +169,16 @@ class CtsSystem(object):
         self._entries[period] = [CtsRecord(*e) for e in entries]
         self._efficiencies[period] = efficiency
         self._concentrations[period] = concentration
+        self._check_for_duplicates(period)
+
+    def _check_for_duplicates(self,period):
+        cts_records = self._entries[period]
+        tups = []
+        for cts_rec in cts_records:
+            tups.append(cts_rec.get_tuple())
+        stups = set(tups)
+        if len(stups) != len(tups):
+            raise Exception("CtsSystem error: duplicate entries for period {0}".format(period))
 
 
     def get_eff_concen_and_entries(self, period):
@@ -670,17 +686,22 @@ class Mf6Cts(object):
                     addr = ["NODELIST", self._gwf_name.upper(), cdata.instance.upper()]
                     wbaddr = self._gwf.get_var_address(*addr)
                     nodes = self._gwf.get_value(wbaddr)
+
+                    # work on the index of this occurence
+                    idx = np.where(nodes == cdata.index + 1)[0][cdata.occurence]
+
                     # the rate for this injector is a function of its requested rate
                     # vs the total inj rate
-                    req_frac = rates[np.where(nodes == cdata.index + 1)[0]] / inj_req
+                    #req_frac = rates[np.where(nodes == cdata.index + 1)[0]] / inj_req
+                    req_frac = rates[idx] / inj_req
                     # dont need to flip the sign here bc the RHS values are already flipped
                     if cts_instance._balance_flows:
-                        rates[np.where(nodes == cdata.index + 1)[0]] = out_tot * req_frac
+                        rates[idx] = out_tot * req_frac
                     else:
                         if org_inj_req == 0:
                             req_frac = 0
                         else:
-                            req_frac = rates[np.where(nodes == cdata.index + 1)[0]] / org_inj_req
+                            req_frac = rates[idx] / org_inj_req
                         out_tot = org_inj_req
                 if record:
                     idx = tuple([cts_num, cdata.index])
@@ -1022,14 +1043,15 @@ class Mf6Cts(object):
                     nodes = self._gwt.get_value(wbaddr)
 
                     # one-based node compare
-                    idx = nodes == (cdata.index + 1)
+                    #idx = nodes == (cdata.index + 1)
+                    idx = np.where(nodes==cdata.index+1)[0][cdata.occurence]
 
                     # the flow rate for this cts record
-                    fr = flow[idx][0]
+                    fr = flow[idx]
                     # get the node for this cts record
                     idx = nodes[idx] - 1
                     # get the conc for this cts record
-                    cn = conc[idx][0]
+                    cn = conc[idx]
                     # mass
                     msr = np.abs(fr * cn)
 
@@ -1182,6 +1204,10 @@ class Mf6Cts(object):
         """read the cts input file
 
         """
+        # used to detect location-pak duplicates
+        current_period = -1
+        current_entries = []
+
         with open(self.cts_filename, 'r') as f:
             count = 0
             while True:
@@ -1238,12 +1264,13 @@ class Mf6Cts(object):
                     concen = 0.0
                     if "concentration" in line.lower():
                         raise NotImplementedError("concentration not implemented")
-                        try:
-                            concen = float(line.lower().split("concentration")[1].split()[0])
-                        except:
-                            raise Exception("error parsing concentration on line {0} ('{1}')".format(count, line))
                     if concen < 0.0:
                         raise Exception("invalid concentration {0} on line {1} ('{2}')".format(concen,count,line))
+
+                    #for tracking multiple occurences in the same cell
+                    if period != current_period:
+                        current_period = period
+                        current_entries = []
 
                     cts_system_entries = []
                     num_inj, num_ext = 0,0
@@ -1316,6 +1343,12 @@ class Mf6Cts(object):
                     else:
                         self._cts_instances[cts_system_num].add_period_entries(period, eff, concen,
                                                                                cts_system_entries)
+                    for cts_rec in self._cts_instances[cts_system_num]._entries[period]:
+                        t = cts_rec.get_tuple_wo_instance()
+                        if t in current_entries:
+                            raise Exception("duplicate locations across cts instances detected for period"+
+                                            " {0} - this currently not supported".format(period))
+                        current_entries.append(t)
 
                 else:
                     raise Exception("unrecognized cts file input on line {0}: '{1}'".format(count, line))

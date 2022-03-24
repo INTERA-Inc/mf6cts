@@ -136,7 +136,7 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
             wel_data = [[(nlay - 1, int(nrowncol / 3), int(2 * nrowncol / 3)), -sys_rate, 0.0]]
             wel_data.append([(nlay - 1, int(2 * nrowncol / 3), int(2 * nrowncol / 3)), -sys_rate, 0.0])
 
-            #
+
             # # now add the injectors
             if shared_inj:
                 wel_data.append([(nlay - 1, 0, int(nrowncol / 2)), sys_rate, 0.0])
@@ -2562,9 +2562,13 @@ def test_five_spotish_api_shared_inj():
 
     flow_budget_file = "gwf.bud"
     # shutil.copy2(os.path.join(sim_ws,flow_budget_file),os.path.join(simt_ws,flow_budget_file))
-
-    mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
-                 is_structured=True)
+    try:
+        mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
+                     is_structured=True)
+    except Exception:
+        return
+    else:
+        raise Exception("should have failed")
 
     mf6.solve_gwf()
     shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
@@ -2650,6 +2654,6 @@ if __name__ == "__main__":
     # pyemu.os_utils.run("./mt3dusgs mt3dtest.nam".format(os.path.split(mt3d_bin)[-1]), cwd="fivespot_t_api_mt")
     # test_five_spotish_simple_api_off()
     # test_five_spotish_simple_api_off2()
-
+    #test_five_spotish_api()
     test_five_spotish_api_shared_inj()
 
