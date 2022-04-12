@@ -337,6 +337,7 @@ class Mf6Cts(object):
                 contains_maw = True
                 break
         self._mwt_name = None
+        self._maw_node_summary = None
         # if maw is present make sure mwt is present
         if contains_maw:
             self._mwt_name = self.get_gwt_mwt_instance_name(os.path.join(transport_dir, namfile_dict[self._gwt_name]))
@@ -740,7 +741,7 @@ class Mf6Cts(object):
                 f.write(",{0}".format(cts_num))
                 f.write(",{0}".format(cts_instance.num_inj))
                 f.write(",{0}".format(cts_instance.num_ext))
-                f.write(",{0}".format(cts_instance.req_rate))
+                f.write(",{0}".format(cts_instance.req_rate*-1.))
                 f.write(",{0}".format(cts_instance.act_rate))
                 f.write(",{0}".format(cts_instance.cum_req_vol))
                 f.write(",{0}\n".format(cts_instance.cum_act_vol))
@@ -814,6 +815,8 @@ class Mf6Cts(object):
         if num_fails > 0:
             print("...failed to converge {0} times".format(num_fails))
         print("\n")
+        self._flow_node_summary.close()
+        self._flow_system_summary.close()
 
     def solve_gwt(self):
         """solve transport across the modflow sim times
@@ -886,6 +889,10 @@ class Mf6Cts(object):
         if num_fails > 0:
             print("...failed to converge {0} times".format(num_fails))
         print("\n")
+        self._cts_node_summary.close()
+        self._cts_system_summary.close()
+        if self._maw_node_summary is not None:
+            self._maw_node_summary.close()
 
     def _write_transport_summary(self,stress_period,time_step,ctime,dt):
         f = self._cts_node_summary
