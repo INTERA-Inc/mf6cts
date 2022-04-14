@@ -7,6 +7,11 @@ The contaminant treatment system (CTS) package is contained in the `\mf6cts\mf6c
 
 ![CI workflow](https://github.com/INTERA-Inc/mf6cts/actions/workflows/ci.yml/badge.svg)
 
+## example
+There is a simple example notebook in `examples/`.  Also available on binder:
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/INTERA-Inc/mf6cts/HEAD?labpath=examples%2F)
+
 
 ## basic user information
 
