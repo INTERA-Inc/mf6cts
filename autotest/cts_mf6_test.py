@@ -2782,7 +2782,7 @@ def test_five_spotish_api_maw_configfile_staggered():
     assert abs_frac_diff < 0.01
 
 if __name__ == "__main__":
-    # test_five_spotish_simple_api1()
+    test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
@@ -2799,8 +2799,8 @@ if __name__ == "__main__":
     # test_five_spotish_api_maw_complex()
     # plot("fivespot_maw_t", "fivespot_maw")
     # plot("fivespot_maw_t_api", "fivespot_maw_api")
-    test_five_spotish_api_maw_configfile_staggered()
-    # plot_domain("fivespot_api")
+    #test_five_spotish_api_maw_configfile_staggered()
+    #plot_domain("fivespot_api")
     # plot_results_pub("fivespot_t_api", "fivespot_api")
     #setup_pst()
     #plot_prior_mc()
