@@ -743,7 +743,7 @@ class Mf6Cts(object):
                 f.write(",{0}".format(cts_instance.num_ext))
                 f.write(",{0}".format(cts_instance.req_rate*-1.))
                 f.write(",{0}".format(cts_instance.act_rate))
-                f.write(",{0}".format(cts_instance.cum_req_vol))
+                f.write(",{0}".format(cts_instance.cum_req_vol*-1))
                 f.write(",{0}\n".format(cts_instance.cum_act_vol))
 
 
