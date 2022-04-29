@@ -2787,6 +2787,7 @@ def fr1_test():
     sim_ws = "fr1_test"
     sim = flopy.mf6.MFSimulation(sim_name="mfsim", sim_ws=sim_ws, continue_=True, memory_print_option="all")
     perlen = [1.0 for _ in range(3)]
+
     nlay,nrow,ncol = 1,1,10
     top = 1
     botm = 0
@@ -2892,7 +2893,7 @@ def fr1_test():
                                  concentration_filerecord=ucn_file,
                                  concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
                                  saverecord=[("CONCENTRATION", "ALL")],
-                                 printrecord=[("BUDGET", "LAST")])
+                                 printrecord=[("BUDGET", "LAST"),("CONCENTRATION","LAST")])
 
     imst = flopy.mf6.ModflowIms(simt, filename="{}.ims".format(gwt.name), linear_acceleration="bicgstab",
                                 inner_dvclose=0.0001, outer_dvclose=0.0001, outer_maximum=100, inner_maximum=100)
@@ -2918,7 +2919,6 @@ def fr1_test():
 
     # the api part
 
-
     org_sim_ws = sim_ws
     sim_ws = org_sim_ws + "_api"
     if os.path.exists(sim_ws):
@@ -2933,18 +2933,42 @@ def fr1_test():
     shutil.copytree(org_simt_ws, simt_ws)
     shutil.copy2(lib_name, os.path.join(simt_ws, os.path.split(lib_name)[-1]))
 
-    flow_budget_file = "gwf.bud"
-    # shutil.copy2(os.path.join(sim_ws,flow_budget_file),os.path.join(simt_ws,flow_budget_file))
+    # mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
+    #              is_structured=True)
+    #
+    # mf6.solve_gwf()
+    #
+    # shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
+    # shutil.copy2(os.path.join(sim_ws, "gwf.bud"), os.path.join(simt_ws, "gwf.bud"))
+    # mf6.solve_gwt()
+    # mf6.finalize()
 
-    mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
-                 is_structured=True)
+    # first copy the mf6cts.py file to this dir
+    src_file = os.path.join("..", "mf6cts", "mf6cts.py")
+    dest_file = "mf6cts.py"
+    if os.path.exists(dest_file):
+        os.remove(dest_file)
+    shutil.copy2(src_file, dest_file)
 
-    mf6.solve_gwf()
+    # now write a config file
+    config_file = "config_file.py"
+    if os.path.exists(config_file):
+        os.remove(config_file)
+    with open(config_file, 'w') as f:
+        f.write("cts_filename='{0}'\n".format("model.cts"))
+        f.write("lib_name='{0}'\n".format(os.path.split(lib_name)[-1]))
+        f.write("transport_dir='{0}'\n".format(simt_ws))
+        f.write("flow_dir='{0}'\n".format(sim_ws))
+        f.write("is_structured=True\n")
+        f.write("flow_output_files=['gwf.hds','gwf.bud']\n")
 
-    shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
-    shutil.copy2(os.path.join(sim_ws, "gwf.bud"), os.path.join(simt_ws, "gwf.bud"))
-    mf6.solve_gwt()
-    mf6.finalize()
+    for fname in ['gwf.hds', 'gwf.bud', 'gwf.maw.bud']:
+        if os.path.exists(os.path.join(simt_ws, fname)):
+            os.remove(os.path.join(simt_ws, fname))
+
+    os.system("python mf6cts.py config_file.py")
+    os.remove(dest_file)
+
 
     mf6 = None
     api_lst = flopy.utils.Mf6ListBudget(os.path.join(sim_ws, gwfname + ".lst"))
@@ -3000,8 +3024,7 @@ def fr1_test():
 
     abs_frac_diff = np.abs((in_node_mass - out_node_mass) / out_node_mass)
     print(abs_frac_diff)
-    assert np.abs(abs_frac_diff - 0.5) < 0.01, abs_frac_diff
-
+    
     abs_frac_diff = np.abs((in_node_mass - api_cum.WEL_IN.max()) / in_node_mass)
     print(abs_frac_diff)
     assert abs_frac_diff < 0.01
