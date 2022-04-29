@@ -2781,8 +2781,239 @@ def test_five_spotish_api_maw_configfile_staggered():
     print(abs_frac_diff)
     assert abs_frac_diff < 0.01
 
+def fr1_test():
+    from mf6cts import Mf6Cts
+    # instaniate...
+    sim_ws = "fr1_test"
+    sim = flopy.mf6.MFSimulation(sim_name="mfsim", sim_ws=sim_ws, continue_=True, memory_print_option="all")
+    perlen = [1.0 for _ in range(3)]
+    nlay,nrow,ncol = 1,1,10
+    top = 1
+    botm = 0
+    # build up the time stepping container for the tdis package
+    tdis_data = [(p, 1, 1.0) for p in perlen]
+
+    tdis = flopy.mf6.ModflowTdis(simulation=sim, nper=len(tdis_data), perioddata=tdis_data)
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions="newton")
+
+    # instantiate discretization package
+    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol, delr=1, delc=1,
+                                  top=top,
+                                  botm=botm)
+
+    # instantiate node property flow package
+    npf = flopy.mf6.ModflowGwfnpf(gwf, k=1, icelltype=1,
+                                  save_specific_discharge=True,
+                                  save_flows=True, save_saturation=True)
+
+    # instantiate initial conditions for the flow solution - set starting heads at midpoint of layer 1
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=top)
+
+    # instantiate the storage package - stress period 1 is steady state, transient after that...
+    sto = flopy.mf6.ModflowGwfsto(gwf, iconvert=1, steady_state={0: True}, transient={1: True}, ss=0.00001, sy=0.01)
+
+    # output control - headsave and budget file names
+
+    oc = flopy.mf6.ModflowGwfoc(gwf, budget_filerecord=bud_file, head_filerecord=hds_file,
+                                headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+                                saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+                                printrecord=[("BUDGET", "LAST")], )
+
+
+    wel_data = [[(0, 0, 1), -1.0, 0.0]]
+    wel_data.append([(0,0,ncol-2),1.0,0.0])
+    # instantiate the wel package
+    wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data={0:wel_data}, save_flows=True,
+                                  auxiliary="concentration", auto_flow_reduce=1.0)
+
+
+    ghb_data = []
+    ghb_data.extend([[(0, 0, 0), top, 100.0, 1.0]])
+    ghb_data.extend([[(0, 0,ncol-1), (top + botm) / 2., 100., 0.0]])
+
+    ghb = flopy.mf6.ModflowGwfghb(gwf, stress_period_data=ghb_data, auxiliary="concentration",
+                                  save_flows=True)
+
+    # just a generic solver will do
+    ims = flopy.mf6.ModflowIms(sim, linear_acceleration="bicgstab", outer_dvclose=0.0001, inner_dvclose=0.0001,
+                               outer_maximum=100,
+                               inner_maximum=250)
+
+    # write the input file
+    sim.simulation_data.max_columns_of_data = sim.get_model("gwf").dis.nrow.data
+    sim.set_all_data_external(check_data=False)
+    sim.write_simulation()
+
+    # run the flow model
+    # os.chdir(sim_ws)
+    shutil.copy2(mf6_bin, os.path.join(sim_ws, os.path.split(mf6_bin)[1]))
+    pyemu.os_utils.run("mf6", cwd=sim_ws)
+    # os.chdir("..")
+
+    # now make a separate transport simulation and model
+    simt_ws = sim_ws + "_t"
+    if os.path.exists(simt_ws):
+        shutil.rmtree(simt_ws)
+    os.makedirs(simt_ws)
+    # transport sim
+    simt = flopy.mf6.MFSimulation(sim_ws=simt_ws, memory_print_option="all", continue_=True)
+    # transport sim temporal discet matches flow solution discret
+    tdist = flopy.mf6.ModflowTdis(simulation=simt, nper=len(tdis_data), perioddata=tdis_data)
+
+    # transport model instance
+    gwtname = "gwt"
+    gwt = flopy.mf6.ModflowGwt(simt, modelname=gwtname, save_flows=True)
+
+    # transport model discret package
+    dist = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol, delr=1, delc=1,
+                                   top=top,
+                                   botm=botm)
+
+    # copy in the flow solution output files for use in the transport model
+    shutil.copy2(os.path.join(sim_ws, hds_file), os.path.join(simt_ws, hds_file))
+    shutil.copy2(os.path.join(sim_ws, bud_file), os.path.join(simt_ws, bud_file))
+    fmi = flopy.mf6.ModflowGwtfmi(gwt, packagedata=[["gwfhead", hds_file], ["gwfbudget", bud_file]],
+                                  flow_imbalance_correction=True)
+
+    # initial concen
+    strt = 1.0
+    ict = flopy.mf6.ModflowGwtic(gwt, strt=strt)
+
+    # remaining transport packages
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme="upstream")
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.05)
+    dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, alh=1.0, ath1=0.1, ath2=0.1)
+    ssm = flopy.mf6.ModflowGwtssm(gwt,
+                                  sources=[["WEL_0", "AUX", "CONCENTRATION"], ["GHB_0", "AUX", "CONCENTRATION"]])
+
+    # transport sim output
+    ucn_file = "{}.ucn".format(gwt.name)
+    oct = flopy.mf6.ModflowGwtoc(gwt, budget_filerecord="{}.cbc".format(gwt.name),
+                                 concentration_filerecord=ucn_file,
+                                 concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
+                                 saverecord=[("CONCENTRATION", "ALL")],
+                                 printrecord=[("BUDGET", "LAST")])
+
+    imst = flopy.mf6.ModflowIms(simt, filename="{}.ims".format(gwt.name), linear_acceleration="bicgstab",
+                                inner_dvclose=0.0001, outer_dvclose=0.0001, outer_maximum=100, inner_maximum=100)
+
+    simt.register_ims_package(imst, [gwt.name])
+
+    # write a cts file
+    effs = [0.0,0.5,1.0]
+    with open(os.path.join(simt_ws, "model.cts"), 'w') as f:
+        f.write("begin options\n\nend options\n\n")
+        for kper,eff in enumerate(effs):
+            f.write("begin period {0} cts 1 efficiency {1:4.3f}\n".format(kper+1, eff))
+            for wd in wel_data:
+                f.write(
+                    "wel wel_0 {0} {1} {2} {3}\n".format("out" if wd[1] < 0 else "in", wd[0][0] + 1, wd[0][1] + 1,
+                                                         wd[0][2] + 1))
+            f.write("end period {0} cts 1\n\n".format(kper + 2))
+
+    # write the transport inputs and run
+    simt.write_simulation()
+    shutil.copy2(mf6_bin, os.path.join(simt_ws, os.path.split(mf6_bin)[1]))
+    pyemu.os_utils.run("mf6", cwd=simt_ws)
+
+    # the api part
+
+
+    org_sim_ws = sim_ws
+    sim_ws = org_sim_ws + "_api"
+    if os.path.exists(sim_ws):
+        shutil.rmtree(sim_ws)
+    shutil.copytree(org_sim_ws, sim_ws)
+    shutil.copy2(lib_name, os.path.join(sim_ws, os.path.split(lib_name)[-1]))
+
+    org_simt_ws = simt_ws
+    simt_ws = org_simt_ws + "_api"
+    if os.path.exists(simt_ws):
+        shutil.rmtree(simt_ws)
+    shutil.copytree(org_simt_ws, simt_ws)
+    shutil.copy2(lib_name, os.path.join(simt_ws, os.path.split(lib_name)[-1]))
+
+    flow_budget_file = "gwf.bud"
+    # shutil.copy2(os.path.join(sim_ws,flow_budget_file),os.path.join(simt_ws,flow_budget_file))
+
+    mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
+                 is_structured=True)
+
+    mf6.solve_gwf()
+
+    shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
+    shutil.copy2(os.path.join(sim_ws, "gwf.bud"), os.path.join(simt_ws, "gwf.bud"))
+    mf6.solve_gwt()
+    mf6.finalize()
+
+    mf6 = None
+    api_lst = flopy.utils.Mf6ListBudget(os.path.join(sim_ws, gwfname + ".lst"))
+    api_inc, api_cum = api_lst.get_dataframes(diff=True)
+    lst = flopy.utils.Mf6ListBudget(os.path.join(org_sim_ws, gwfname + ".lst"))
+    inc, cum = lst.get_dataframes(diff=True)
+
+    print(api_cum.iloc[-1, :])
+    print(cum.iloc[-1, :])
+    assert np.abs(cum.loc[cum.index[-1], "wel"]) > np.abs(api_cum.loc[api_cum.index[-1], "wel"])
+    abs_frac_diff = np.abs(api_cum.loc[api_cum.index[-1], "wel"] / cum.loc[cum.index[-1], "wel"])
+    assert abs_frac_diff < 0.01
+
+    api_lst = Mf6TListBudget(os.path.join(simt_ws, gwtname + ".lst"))
+    api_inc, api_cum = api_lst.get_dataframes(diff=False)
+    print(api_cum.iloc[-1, :])
+
+    node_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_node_summary.csv"))
+    in_node_mass = node_df.loc[
+                   node_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == 1, axis=1),
+                   :].cum_mass.sum()
+
+    out_node_mass = node_df.loc[
+                    node_df.apply(lambda x: x.cum_vol < 0 and x.stress_period == 1, axis=1),
+                    :].cum_mass.sum()
+    print(in_node_mass, out_node_mass)
+    abs_frac_diff = np.abs(in_node_mass - out_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    in_node_mass = node_df.loc[
+                   node_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == node_df.stress_period.max(), axis=1),
+                   :].cum_mass.sum()
+    abs_frac_diff = np.abs((in_node_mass - api_cum.WEL_IN.max()) / in_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    out_node_mass = node_df.loc[
+                   node_df.apply(lambda x: x.cum_vol < 0 and x.stress_period == node_df.stress_period.max(), axis=1),
+                   :].cum_mass.sum()
+    abs_frac_diff = np.abs((out_node_mass - api_cum.WEL_OUT.max()) / out_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    sys_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_system_summary.csv"))
+    in_node_mass = sys_df.loc[
+                   sys_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == sys_df.stress_period.max(), axis=1),
+                   :].cum_mass_injected.sum()
+
+    out_node_mass = sys_df.loc[
+                    sys_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == sys_df.stress_period.max(), axis=1),
+                    :].cum_mass_removed.sum()
+
+    abs_frac_diff = np.abs((in_node_mass - out_node_mass) / out_node_mass)
+    print(abs_frac_diff)
+    assert np.abs(abs_frac_diff - 0.5) < 0.01, abs_frac_diff
+
+    abs_frac_diff = np.abs((in_node_mass - api_cum.WEL_IN.max()) / in_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+    abs_frac_diff = np.abs((out_node_mass - api_cum.WEL_OUT.max()) / out_node_mass)
+    print(abs_frac_diff)
+    assert abs_frac_diff < 0.01
+
+
 if __name__ == "__main__":
-    test_five_spotish_simple_api1()
+    fr1_test()
+    #test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")

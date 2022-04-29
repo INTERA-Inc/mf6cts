@@ -837,6 +837,7 @@ class Mf6Cts(object):
         self._cts_current_nodes = []
         # get the current sim time
         ctime = self._gwt.get_current_time()
+        ctimes = [0.0]
         # get the ending sim time
         etime = self._gwt.get_end_time()
         # max number of solution iterations
@@ -866,13 +867,14 @@ class Mf6Cts(object):
                     print("transport stress period,time step {0},{1} converged with {2} iters, took {3:10.5G} mins".format(stress_period, time_step, kiter,td))
                     break
                 kiter += 1
-            # run thru one last time to record the final converged cts metrics
-            self._set_current_injection_concentrations(ctime, stress_period, dt, record=True)
+
             if not convg:
                 td = (datetime.now() - sol_start).total_seconds() / 60.0
                 print("transport stress period,time step {0},{1} did not converged, {2} iters, took {3:10.5G} mins".format(
                     stress_period, time_step, kiter, td))
                 num_fails += 1
+
+
 
             try:
                 self._gwt.finalize_solve(1)
@@ -882,7 +884,10 @@ class Mf6Cts(object):
 
             # update the current time tracking
             ctime = self._gwt.get_current_time()
+            # run thru one last time to record the final converged cts metrics
+            self._set_current_injection_concentrations(ctime, stress_period, ctime - ctimes[-1], record=True)
             self._write_transport_summary(stress_period,time_step,ctime,dt)
+            ctimes.append(ctime)
         sim_end = datetime.now()
         td = (sim_end - sim_start).total_seconds() / 60.0
         print("\n...transport solution finished at {0}, took: {1:10.5G} mins".format(sim_end.strftime(DT_FMT),td))
@@ -1043,6 +1048,13 @@ class Mf6Cts(object):
                     addr = ["FLOW", self._gwt_name.upper(), fmi_attr_name]
                     wbaddr = self._gwt.get_var_address(*addr)
                     flow = self._gwt.get_value(wbaddr)
+                    if flow.shape[0] == 0:
+                        mess = "Mf6Cts._set_current_injection_concentrations(): no WEL nodes found for {0} during SP {1}".\
+                                        format(fmi_attr_name,stress_period)
+                        mess += "\n for CTS instance {0}. usually this means the CTS entries dont align with the WEL entries".\
+                            format(cts_num)
+                        raise Exception(mess)
+
 
                     # get the nodes for this FMI flow term
                     addr = ["NODELIST", self._gwt_name.upper(), fmi_attr_name]
