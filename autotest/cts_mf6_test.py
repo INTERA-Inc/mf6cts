@@ -2793,7 +2793,7 @@ def fr1_test():
     sim = flopy.mf6.MFSimulation(sim_name="mfsim", sim_ws=sim_ws, continue_=True, memory_print_option="all")
     perlen = [10000.0 for _ in range(3)]
 
-    nlay,nrow,ncol = 1,1,10
+    nlay,nrow,ncol = 1,1,5
     top = 1
     botm = 0
     # build up the time stepping container for the tdis package
@@ -3054,7 +3054,7 @@ def fr1_test():
 
 
 if __name__ == "__main__":
-    #fr1_test()
+    fr1_test()
     #test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
@@ -3065,11 +3065,11 @@ if __name__ == "__main__":
     # plot("fivespot_t", "fivespot")
     # plot("fivespot_t_api", "fivespot_api")
     # test_five_spotish_simple_api_mk2k_compare()
-    test_five_spotish_complex_api_mk2k_compare()
+    #test_five_spotish_complex_api_mk2k_compare()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
     # test_five_spotish_api_maw()
-    test_five_spotish_api_maw_complex()
+    #test_five_spotish_api_maw_complex()
     # plot("fivespot_maw_t", "fivespot_maw")
     # plot("fivespot_maw_t_api", "fivespot_maw_api")
     #test_five_spotish_api_maw_configfile_staggered()
