@@ -2788,7 +2788,7 @@ def fr1_test():
     sim = flopy.mf6.MFSimulation(sim_name="mfsim", sim_ws=sim_ws, continue_=True, memory_print_option="all")
     perlen = [10000.0 for _ in range(3)]
 
-    nlay,nrow,ncol = 1,1,10
+    nlay,nrow,ncol = 1,1,5
     top = 1
     botm = 0
     # build up the time stepping container for the tdis package
@@ -2799,7 +2799,7 @@ def fr1_test():
 
     # instantiate discretization package
     id = np.ones((nrow,ncol),dtype=int)
-    #id[0,2:-2] = 0
+    id[0,2:-2] = 0
 
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol, delr=1, delc=1,
@@ -3037,10 +3037,20 @@ def fr1_test():
     print(abs_frac_diff)
     assert abs_frac_diff < 0.01
 
+    ucn = flopy.utils.HeadFile(os.path.join(simt_ws,"gwt.ucn"),text="concentration")
+    for ikper,eff in enumerate(effs):
+        arr = ucn.get_data(kstpkper=(0,ikper))
+        sim_eff = arr[0,0,1] - (arr[0,0,-2]/arr[0,0,1])
+        d = np.abs(sim_eff - eff)
+        #print(arr[0,0,1],arr[0,0,-2],eff,sim_eff)
+        print(d)
+        assert d < 1.0e-6
+
+
 
 if __name__ == "__main__":
-    #fr1_test()
-    test_five_spotish_simple_api1()
+    fr1_test()
+    #test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
