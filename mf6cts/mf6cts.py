@@ -1354,11 +1354,16 @@ class Mf6Cts(object):
 
                             # convert to node number
                             n = self._structured_mg.get_node([kij])[0] + 1
-                            nn = np.where(nuser == n)[0]
-                            if nn.shape[0] != 1:
-                                raise Exception("node num {0} not in reduced node num".format(n))
-                            cts_system_entries.append(
-                                [nn[0], inout, package_type, bc_name])
+                            # if there is a reduced node scheme
+                            if len(nuser) > 1:
+                                nn = np.where(nuser == n)[0]
+                                if nn.shape[0] != 1:
+                                    raise Exception("node num {0} not in reduced node num".format(n))
+                                cts_system_entries.append(
+                                    [nn[0], inout, package_type, bc_name])
+                            else:
+                                cts_system_entries.append(
+                                    [n-1, inout, package_type, bc_name])
 
                         else:
                             raise NotImplementedError("only structured grids currently supported")

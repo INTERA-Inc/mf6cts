@@ -2799,7 +2799,7 @@ def fr1_test():
 
     # instantiate discretization package
     id = np.ones((nrow,ncol),dtype=int)
-    id[0,2:-2] = 0
+    #id[0,2:-2] = 0
 
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol, delr=1, delc=1,
@@ -3039,8 +3039,8 @@ def fr1_test():
 
 
 if __name__ == "__main__":
-    fr1_test()
-    #test_five_spotish_simple_api1()
+    #fr1_test()
+    test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
