@@ -2786,7 +2786,7 @@ def fr1_test():
     # instaniate...
     sim_ws = "fr1_test"
     sim = flopy.mf6.MFSimulation(sim_name="mfsim", sim_ws=sim_ws, continue_=True, memory_print_option="all")
-    perlen = [1.0 for _ in range(3)]
+    perlen = [10000.0 for _ in range(3)]
 
     nlay,nrow,ncol = 1,1,10
     top = 1
@@ -2799,8 +2799,8 @@ def fr1_test():
 
     # instantiate discretization package
     id = np.ones((nrow,ncol),dtype=int)
-    id[0,int(ncol/2)] = 0
-    id[0, int(ncol / 2)-2] = 0
+    id[0,2:-2] = 0
+
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol, delr=1, delc=1,
                                   top=top,
@@ -2886,7 +2886,7 @@ def fr1_test():
 
     # remaining transport packages
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme="upstream")
-    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.05)
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=0.0001)
     dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, alh=1.0, ath1=0.1, ath2=0.1)
     ssm = flopy.mf6.ModflowGwtssm(gwt,
                                   sources=[["WEL_0", "AUX", "CONCENTRATION"], ["GHB_0", "AUX", "CONCENTRATION"]])
