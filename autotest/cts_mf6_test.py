@@ -100,9 +100,9 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
 
     # instantiate discretization package
 
-    idomain = np.ones((nrowncol,nrowncol))
-    idomain[0,2:5] = 0
-    idomain[nrowncol-1, 2:5] = 0
+    idomain = np.ones((nlay,nrowncol,nrowncol))
+    idomain[:,0,2:5] = 0
+    idomain[:,nrowncol-1, 2:5] = 0
 
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrowncol, ncol=nrowncol, delr=delrdelc, delc=delrdelc, top=top,
                                   botm=botm[:nlay],idomain=idomain)
@@ -3060,16 +3060,16 @@ if __name__ == "__main__":
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
 
-    test_five_spotish_api()
+    #test_five_spotish_api()
 
     # plot("fivespot_t", "fivespot")
     # plot("fivespot_t_api", "fivespot_api")
     # test_five_spotish_simple_api_mk2k_compare()
-    # test_five_spotish_complex_api_mk2k_compare()
+    test_five_spotish_complex_api_mk2k_compare()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
     # test_five_spotish_api_maw()
-    # test_five_spotish_api_maw_complex()
+    test_five_spotish_api_maw_complex()
     # plot("fivespot_maw_t", "fivespot_maw")
     # plot("fivespot_maw_t_api", "fivespot_maw_api")
     #test_five_spotish_api_maw_configfile_staggered()
