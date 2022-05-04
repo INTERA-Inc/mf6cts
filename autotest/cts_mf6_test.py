@@ -99,8 +99,13 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions="newton")
 
     # instantiate discretization package
+
+    idomain = np.ones((nrowncol,nrowncol))
+    idomain[0,2:5] = 0
+    idomain[nrowncol-1, 2:5] = 0
+
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrowncol, ncol=nrowncol, delr=delrdelc, delc=delrdelc, top=top,
-                                  botm=botm[:nlay])
+                                  botm=botm[:nlay],idomain=idomain)
 
     # instantiate node property flow package
     npf = flopy.mf6.ModflowGwfnpf(gwf, k=hk[:nlay], k33overk=True, k33=0.1, icelltype=1, save_specific_discharge=True,
@@ -303,7 +308,7 @@ def setup_five_spotish(plot=False, sim_ws="fivespot", simple_pattern=False, eff1
 
     # transport model discret package
     dist = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrowncol, ncol=nrowncol, delr=delrdelc, delc=delrdelc, top=top,
-                                   botm=botm[:nlay])
+                                   botm=botm[:nlay],idomain=idomain)
 
     # copy in the flow solution output files for use in the transport model
     shutil.copy2(os.path.join(sim_ws, hds_file), os.path.join(simt_ws, hds_file))
@@ -2788,7 +2793,7 @@ def fr1_test():
     sim = flopy.mf6.MFSimulation(sim_name="mfsim", sim_ws=sim_ws, continue_=True, memory_print_option="all")
     perlen = [10000.0 for _ in range(3)]
 
-    nlay,nrow,ncol = 1,1,5
+    nlay,nrow,ncol = 1,1,10
     top = 1
     botm = 0
     # build up the time stepping container for the tdis package
@@ -2824,8 +2829,8 @@ def fr1_test():
                                 printrecord=[("BUDGET", "LAST"),("HEAD","LAST")], )
 
 
-    wel_data = [[(0, 0, 1), -1.0, 0.0]]
-    wel_data.append([(0,0,ncol-2),1.0,0.0])
+    wel_data = [[(0, 0, 1), -10.0, 0.0]]
+    wel_data.append([(0,0,ncol-2),10.0,0.0])
     # instantiate the wel package
     wel = flopy.mf6.ModflowGwfwel(gwf, stress_period_data={0:wel_data}, save_flows=True,
                                   auxiliary="concentration", auto_flow_reduce=1.0)
@@ -3049,13 +3054,13 @@ def fr1_test():
 
 
 if __name__ == "__main__":
-    fr1_test()
+    #fr1_test()
     #test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
 
-    #test_five_spotish_api()
+    test_five_spotish_api()
 
     # plot("fivespot_t", "fivespot")
     # plot("fivespot_t_api", "fivespot_api")
@@ -3063,7 +3068,7 @@ if __name__ == "__main__":
     # test_five_spotish_complex_api_mk2k_compare()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
-    #test_five_spotish_api_maw()
+    # test_five_spotish_api_maw()
     # test_five_spotish_api_maw_complex()
     # plot("fivespot_maw_t", "fivespot_maw")
     # plot("fivespot_maw_t_api", "fivespot_maw_api")
