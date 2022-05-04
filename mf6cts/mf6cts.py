@@ -628,16 +628,17 @@ class Mf6Cts(object):
                     self._cts_node_record_dict[idx]["cts_num"] = cts_num
                     self._cts_node_record_dict[idx]["index"] = cdata.index
                     self._cts_node_record_dict[idx]["inout"] = cdata.inout
-                    if self._structured_mg is not None:
+                    if self._structured_mg is not None and cdata.pakname != "maw":
                         addr = ["NODEUSER", self._gwf_name.upper(), "DIS"]
                         wbaddr = self._gwf.get_var_address(*addr)
                         nuser = self._gwf.get_value(wbaddr)
 
-                        addr = ["NODEREDUCED", self._gwf_name.upper(), "DIS"]
-                        wbaddr = self._gwf.get_var_address(*addr)
-                        nred = self._gwf.get_value(wbaddr)
-
-                        n = nuser[cdata.index] - 1
+                        # addr = ["NODEREDUCED", self._gwf_name.upper(), "DIS"]
+                        # wbaddr = self._gwf.get_var_address(*addr)
+                        # nred = self._gwf.get_value(wbaddr)
+                        n = cdata.index
+                        if nuser.shape[0] > 1:
+                            n = nuser[cdata.index] - 1
                         kij = self._structured_mg.get_lrc([n])[0]
                         self._cts_node_record_dict[idx]["kij"] = kij
 
@@ -965,7 +966,7 @@ class Mf6Cts(object):
                 f.write(",{0}".format(cts_instance.mass_inj))
                 f.write(",{0}".format(cts_instance.cum_mass_inj))
                 f.write(",{0}".format(cts_instance.inj_conc))
-                f.write(",{0}".format(eff))
+                f.write(",{0}\n".format(eff))
         if len(self._maw_current_nodes) > 0:
             # self._maw_node_summary.write("stress_period,time_step,ctime,dt,cts_system,package,instance")
             # self._maw_node_summary.write(",maw_wellno,index,flow_rate,cum_vol,concen,mass,cum_mass\n")
@@ -1138,7 +1139,7 @@ class Mf6Cts(object):
                     self._cts_node_record_dict[idx]["package"] = cdata.pakname
                     self._cts_node_record_dict[idx]["cts_num"] = cts_num
                     self._cts_node_record_dict[idx]["index"] = cdata.index
-                    if self._structured_mg is not None:
+                    if self._structured_mg is not None and cdata.pakname != "maw":
                         addr = ["NODEUSER", self._gwf_name.upper(), "DIS"]
                         wbaddr = self._gwf.get_var_address(*addr)
                         nuser = self._gwf.get_value(wbaddr)
@@ -1147,7 +1148,9 @@ class Mf6Cts(object):
                         wbaddr = self._gwf.get_var_address(*addr)
                         nred = self._gwf.get_value(wbaddr)
 
-                        n = nuser[cdata.index] - 1
+                        n = cdata.index
+                        if nuser.shape[0] > 1:
+                            n = nuser[cdata.index] - 1
                         kij = self._structured_mg.get_lrc([n])[0]
                         self._cts_node_record_dict[idx]["kij"] = kij
                     self._cts_current_nodes.append(idx)
