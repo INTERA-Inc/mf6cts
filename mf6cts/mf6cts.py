@@ -307,7 +307,10 @@ class Mf6Cts(object):
 
         self._flow_node_summary = open(os.path.join(flow_dir, self._gwf_name + "_cts_flow_node_summary.csv"), 'w')
         self._flow_node_summary.write("stress_period,time_step,ctime,dt,cts_system,package,instance,inout,index,")
-        self._flow_node_summary.write("requested_rate,actual_rate,requested_cum_vol,actual_cum_vol\n")
+        self._flow_node_summary.write("requested_rate,actual_rate,requested_cum_vol,actual_cum_vol")
+        if self._structured_mg is not None:
+            self._flow_node_summary.write(",layer,row,column")
+        self._flow_node_summary.write("\n")
 
         self._flow_system_summary = open(os.path.join(flow_dir, self._gwf_name + "_cts_flow_system_summary.csv"), 'w')
         self._flow_system_summary.write("stress_period,time_step,ctime,dt,cts_system,num_injectors,num_extractors,")
@@ -321,7 +324,10 @@ class Mf6Cts(object):
 
         self._cts_node_summary = open(os.path.join(transport_dir, self._gwt_name + "_cts_node_summary.csv"), 'w')
         self._cts_node_summary.write("stress_period,time_step,ctime,dt,cts_system,package,instance")
-        self._cts_node_summary.write(",index,flow_rate,cum_vol,concen,mass_rate,mass,cum_mass\n")
+        self._cts_node_summary.write(",index,flow_rate,cum_vol,concen,mass_rate,mass,cum_mass")
+        if self._structured_mg is not None:
+            self._cts_node_summary.write(",layer,row,column")
+            self._cts_node_summary.write("\n")
         self._cts_node_record_dict = {}
         self._maw_node_record_dict = {}
         self._cts_current_nodes = []
@@ -622,6 +628,18 @@ class Mf6Cts(object):
                     self._cts_node_record_dict[idx]["cts_num"] = cts_num
                     self._cts_node_record_dict[idx]["index"] = cdata.index
                     self._cts_node_record_dict[idx]["inout"] = cdata.inout
+                    if self._structured_mg is not None:
+                        addr = ["NODEUSER", self._gwf_name.upper(), "DIS"]
+                        wbaddr = self._gwf.get_var_address(*addr)
+                        nuser = self._gwf.get_value(wbaddr)
+
+                        addr = ["NODEREDUCED", self._gwf_name.upper(), "DIS"]
+                        wbaddr = self._gwf.get_var_address(*addr)
+                        nred = self._gwf.get_value(wbaddr)
+
+                        n = nuser[cdata.index] - 1
+                        kij = self._structured_mg.get_lrc([n])[0]
+                        self._cts_node_record_dict[idx]["kij"] = kij
 
                     self._cts_current_nodes.append(idx)
                     if cdata.inout == "in":
@@ -736,7 +754,12 @@ class Mf6Cts(object):
             f.write(",{0}".format(rec["req_rate"]))
             f.write(",{0}".format(rec["act_rate"]))
             f.write(",{0}".format(rec["cum_req_vol"]))
-            f.write(",{0}\n".format(rec["cum_act_vol"]))
+            f.write(",{0}".format(rec["cum_act_vol"]))
+            if "kij" in rec:
+                for ii in rec["kij"]:
+                    f.write(",{0}".format(ii+1))
+            f.write("\n")
+
         if len(self._cts_current_nodes) > 0:
             f = self._flow_system_summary
             for cts_num, cts_instance in self._cts_instances.items():
@@ -920,7 +943,11 @@ class Mf6Cts(object):
             f.write(",{0}".format(rec["concen"]))
             f.write(",{0}".format(rec["mass_rate"]))
             f.write(",{0}".format(rec["mass"]))
-            f.write(",{0}\n".format(rec["cum_mass"]))
+            f.write(",{0}".format(rec["cum_mass"]))
+            if "kij" in rec:
+                for ii in rec["kij"]:
+                    f.write(",{0}".format(ii+1))
+            f.write("\n")
         if len(self._cts_current_nodes) > 0:
             f = self._cts_system_summary
             for cts_num,cts_instance in self._cts_instances.items():
@@ -938,7 +965,7 @@ class Mf6Cts(object):
                 f.write(",{0}".format(cts_instance.mass_inj))
                 f.write(",{0}".format(cts_instance.cum_mass_inj))
                 f.write(",{0}".format(cts_instance.inj_conc))
-                f.write(",{0}\n".format(eff))
+                f.write(",{0}".format(eff))
         if len(self._maw_current_nodes) > 0:
             # self._maw_node_summary.write("stress_period,time_step,ctime,dt,cts_system,package,instance")
             # self._maw_node_summary.write(",maw_wellno,index,flow_rate,cum_vol,concen,mass,cum_mass\n")
@@ -1111,6 +1138,18 @@ class Mf6Cts(object):
                     self._cts_node_record_dict[idx]["package"] = cdata.pakname
                     self._cts_node_record_dict[idx]["cts_num"] = cts_num
                     self._cts_node_record_dict[idx]["index"] = cdata.index
+                    if self._structured_mg is not None:
+                        addr = ["NODEUSER", self._gwf_name.upper(), "DIS"]
+                        wbaddr = self._gwf.get_var_address(*addr)
+                        nuser = self._gwf.get_value(wbaddr)
+
+                        addr = ["NODEREDUCED", self._gwf_name.upper(), "DIS"]
+                        wbaddr = self._gwf.get_var_address(*addr)
+                        nred = self._gwf.get_value(wbaddr)
+
+                        n = nuser[cdata.index] - 1
+                        kij = self._structured_mg.get_lrc([n])[0]
+                        self._cts_node_record_dict[idx]["kij"] = kij
                     self._cts_current_nodes.append(idx)
                     if cdata.inout == "in" and fr >= 0:
                         inj_idx.append(idx)
