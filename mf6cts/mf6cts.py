@@ -766,6 +766,7 @@ class Mf6Cts(object):
         self._cts_current_nodes = []
         # get current sim time
         ctime = self._gwf.get_current_time()
+        ctimes = [0.0]
         # get ending sim time
         etime = self._gwf.get_end_time()
         # max number of iterations
@@ -797,8 +798,7 @@ class Mf6Cts(object):
 
                 kiter += 1
 
-            # this time record the deets
-            self._balance_cts_flows(stress_period, dt, kiter, True)
+
             if not convg:
                 td = (datetime.now() - sol_start).total_seconds() / 60.0
                 print("flow stress period,time step {0},{1} did not converge, {2} iters, took {3:10.5G} mins".format(stress_period,time_step,kiter,td))
@@ -811,7 +811,10 @@ class Mf6Cts(object):
             self._gwf.finalize_time_step()
             # update current sim time
             ctime = self._gwf.get_current_time()
-            self._write_flow_summary(stress_period,time_step,ctime,dt)
+            # this time record the deets
+            self._balance_cts_flows(stress_period, ctime - ctimes[-1], kiter, True)
+            self._write_flow_summary(stress_period,time_step,ctime,ctime - ctimes[-1])
+            ctimes.append(ctime)
         sim_end = datetime.now()
         td = (sim_end - sim_start).total_seconds() / 60.0
         print("\n...flow solution finished at {0}, took: {1:10.5G} mins".format(sim_end.strftime(DT_FMT),td))
@@ -889,7 +892,7 @@ class Mf6Cts(object):
             ctime = self._gwt.get_current_time()
             # run thru one last time to record the final converged cts metrics
             self._set_current_injection_concentrations(ctime, stress_period, ctime - ctimes[-1], record=True)
-            self._write_transport_summary(stress_period,time_step,ctime,dt)
+            self._write_transport_summary(stress_period,time_step,ctime,ctime - ctimes[-1])
             ctimes.append(ctime)
         sim_end = datetime.now()
         td = (sim_end - sim_start).total_seconds() / 60.0
@@ -1191,7 +1194,6 @@ class Mf6Cts(object):
                         #print(inj_conc)
                         cts_conc[cdata.index - 1] = inj_conc
 
-
                 else:
                     # get the FMI flow term tag
                     fmi_attr_name = self._get_fmi_attr_name(cdata)
@@ -1268,9 +1270,6 @@ class Mf6Cts(object):
                             raise Exception("a new begin block found while parsing options")
                         elif line2.lower().strip().startswith("end options"):
                             break
-
-                        # todo: parse options
-
 
                 # parse a new cts system period block
                 elif line.lower().strip().startswith("begin period"):
