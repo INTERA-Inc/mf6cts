@@ -585,6 +585,9 @@ class Mf6Cts(object):
                     nodes = self._gwf.get_value(wbaddr)
 
                     # if this is an extraction node, accum req and actual rates
+                    if cdata.index+1 not in nodes:
+                        raise Exception("Mf6Cts._balance_cts_flows()"+\
+                               "internal error: node {0} not in nodes".format(cdata.index+1))
                     req_rate = req_rates[np.where(nodes == cdata.index + 1)[0]][0][0]
                     if kiter == 1:
                         self._initial_req_rates[tuple([cts_num,cdata.index])] = req_rate
@@ -1063,6 +1066,9 @@ class Mf6Cts(object):
 
                     # one-based node compare
                     #idx = nodes == (cdata.index + 1)
+                    if cdata.index+1 not in nodes:
+                        raise Exception("Mf6Cts._set_current_injection_concentrations()"+\
+                               "internal error: node {0} not in nodes".format(cdata.index+1))
                     idx = np.where(nodes==cdata.index+1)[0][cdata.occurence]
 
                     # the flow rate for this cts record
@@ -1227,6 +1233,14 @@ class Mf6Cts(object):
         current_period = -1
         current_entries = []
 
+        addr = ["NODEUSER", self._gwf_name.upper(), "DIS"]
+        wbaddr = self._gwf.get_var_address(*addr)
+        nuser = self._gwf.get_value(wbaddr)
+
+        addr = ["NODEREDUCED", self._gwf_name.upper(), "DIS"]
+        wbaddr = self._gwf.get_var_address(*addr)
+        nred = self._gwf.get_value(wbaddr)
+
         with open(self.cts_filename, 'r') as f:
             count = 0
             while True:
@@ -1339,8 +1353,12 @@ class Mf6Cts(object):
                             # todo: check that the kij info is inbounds
 
                             # convert to node number
+                            n = self._structured_mg.get_node([kij])[0] + 1
+                            nn = np.where(nuser == n)[0]
+                            if nn.shape[0] != 1:
+                                raise Exception("node num {0} not in reduced node num".format(n))
                             cts_system_entries.append(
-                                [self._structured_mg.get_node([kij])[0], inout, package_type, bc_name])
+                                [nn[0], inout, package_type, bc_name])
 
                         else:
                             raise NotImplementedError("only structured grids currently supported")

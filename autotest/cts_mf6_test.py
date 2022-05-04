@@ -2798,12 +2798,16 @@ def fr1_test():
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, newtonoptions="newton")
 
     # instantiate discretization package
+    id = np.ones((nrow,ncol),dtype=int)
+    id[0,int(ncol/2)] = 0
+    id[0, int(ncol / 2)-2] = 0
+
     dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol, delr=1, delc=1,
                                   top=top,
-                                  botm=botm)
+                                  botm=botm,idomain=id)
 
     # instantiate node property flow package
-    npf = flopy.mf6.ModflowGwfnpf(gwf, k=1, icelltype=1,
+    npf = flopy.mf6.ModflowGwfnpf(gwf, k=100, icelltype=1,
                                   save_specific_discharge=True,
                                   save_flows=True, save_saturation=True)
 
@@ -2814,11 +2818,10 @@ def fr1_test():
     sto = flopy.mf6.ModflowGwfsto(gwf, iconvert=1, steady_state={0: True}, transient={1: True}, ss=0.00001, sy=0.01)
 
     # output control - headsave and budget file names
-
     oc = flopy.mf6.ModflowGwfoc(gwf, budget_filerecord=bud_file, head_filerecord=hds_file,
                                 headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
                                 saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-                                printrecord=[("BUDGET", "LAST")], )
+                                printrecord=[("BUDGET", "LAST"),("HEAD","LAST")], )
 
 
     wel_data = [[(0, 0, 1), -1.0, 0.0]]
@@ -2829,8 +2832,9 @@ def fr1_test():
 
 
     ghb_data = []
-    ghb_data.extend([[(0, 0, 0), top, 100.0, 1.0]])
-    ghb_data.extend([[(0, 0,ncol-1), (top + botm) / 2., 100., 0.0]])
+    ghb_data.extend([[(0, 0, 0), top, 1000.0, 1.0]])
+    ghb_data.extend([[(0, 0,ncol-1), (top + botm) / 2., 1000., 0.0]])
+    #ghb_data.extend([[(0, 0, int(ncol/2)), top, 100., 0.0]])
 
     ghb = flopy.mf6.ModflowGwfghb(gwf, stress_period_data=ghb_data, auxiliary="concentration",
                                   save_flows=True)
@@ -2868,7 +2872,7 @@ def fr1_test():
     # transport model discret package
     dist = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol, delr=1, delc=1,
                                    top=top,
-                                   botm=botm)
+                                   botm=botm,idomain=id)
 
     # copy in the flow solution output files for use in the transport model
     shutil.copy2(os.path.join(sim_ws, hds_file), os.path.join(simt_ws, hds_file))
@@ -2877,7 +2881,7 @@ def fr1_test():
                                   flow_imbalance_correction=True)
 
     # initial concen
-    strt = 1.0
+    strt = 0.0
     ict = flopy.mf6.ModflowGwtic(gwt, strt=strt)
 
     # remaining transport packages
@@ -2933,15 +2937,15 @@ def fr1_test():
     shutil.copytree(org_simt_ws, simt_ws)
     shutil.copy2(lib_name, os.path.join(simt_ws, os.path.split(lib_name)[-1]))
 
-    # mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
-    #              is_structured=True)
-    #
-    # mf6.solve_gwf()
-    #
-    # shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
-    # shutil.copy2(os.path.join(sim_ws, "gwf.bud"), os.path.join(simt_ws, "gwf.bud"))
-    # mf6.solve_gwt()
-    # mf6.finalize()
+    mf6 = Mf6Cts("model.cts", os.path.split(lib_name)[-1], transport_dir=simt_ws, flow_dir=sim_ws,
+                 is_structured=True)
+
+    mf6.solve_gwf()
+
+    shutil.copy2(os.path.join(sim_ws, "gwf.hds"), os.path.join(simt_ws, "gwf.hds"))
+    shutil.copy2(os.path.join(sim_ws, "gwf.bud"), os.path.join(simt_ws, "gwf.bud"))
+    mf6.solve_gwt()
+    mf6.finalize()
 
     # first copy the mf6cts.py file to this dir
     src_file = os.path.join("..", "mf6cts", "mf6cts.py")
