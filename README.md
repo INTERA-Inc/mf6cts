@@ -159,27 +159,28 @@ After running the verification test, users can check that the `Mf6Cts` functione
 
 ## How it works - flow balancing
 
+- read the CTS input file and instantiate the MODFLOW-6 flow model through the API
 - for each stress period
     + for each time step
         * for each solution iteration except the first 
             - for each CTS instance
-                + get the requested extraction and injection rates for each WEL/MAW entry in this CTS
-                + get the corresponding last iteration simulated extraction and injection rates
+                + get the requested extraction and injection rates for each WEL/MAW entry in this CTS.  The entries for each CTS is stored in the CTS input file, while the rate information is stored in the corresponding MODFLOW-6 input file
+                + get the corresponding last iteration simulated extraction and injection rates through the API as an array stored in memory
                 + if the total simulated extraction rate is less than the total requested extraction rate, scale the requested injection rate for all injectors proportionally such that the total requested injection rate is equal to the total simulated extraction rate.
-                + reset the requested injection rate array pointer in memory so that the next iteration will use these rates
+                + reset the requested injection rate array pointer in memory through the API so that the next iteration will use these rates
         * once solution has converged or maximum number of iterations is reached, record CTS results to the node and system summary CSV files
 
 ## How it works - treatment efficiency
-
+- read the CTS input file and instantiate the MODFLOW-6 transport model through the API
 - for each stress period
     + for each time step
         * for each solution iteration
             - for each CTS instance
-                + accumulate the mass removed by each extractor by summing the concentration time flow rate product
-                + apply the treatment efficiency by multiplying the requested treatment efficiency times the total mass removed by extractors to yield the mass removed by the treatment system and the mass to be injected
-                + sum the total injection volume as flow rate times time-step length for all injectors
+                + accumulate the mass removed by each extractor by summing the concentration times flow rate product for the entries in this CTS.  The CTS entries are stored in the CTS input file; the simulated concentration array and flow-rate array are accessed through the API.
+                + apply the treatment efficiency by multiplying the requested treatment efficiency times the total mass removed by extractors to yield the mass removed by the treatment system and the mass to be injected.  The treatment efficiency for each CTS instance for each stress period is stored in the CTS input file.
+                + sum the total injection volume as flow rate times time-step length for all injectors.
                 + calculate the injection concentration as injection mass divided by total injection volume
-                + reset the injection well concentration array pointer in memory so that the next iteration will use the injection concentration
+                + reset the injection well concentration array pointer in memory through the API so that the next iteration will use the calculated injection concentration resulting from the application of the treatment efficiency
         * Once the solution has converged or the maximum  number of iterations is reached, record the CTS results in the node and system summary CSV files 
 
 
