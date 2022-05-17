@@ -26,7 +26,7 @@ else:
 
 sys.path.append(os.path.join("..", "mf6cts"))
 
-nrowncol = 33
+nrowncol = 333
 # number of layers
 NLAY = 3
 
@@ -3054,8 +3054,8 @@ def fr1_test():
 
 
 if __name__ == "__main__":
-    fr1_test()
-    #test_five_spotish_simple_api1()
+    #fr1_test()
+    test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")

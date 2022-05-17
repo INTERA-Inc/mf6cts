@@ -154,5 +154,32 @@ After running the verification test, users can check that the `Mf6Cts` functione
 
 - Checking the locations of the extraction and injection wells:  In the file "./verification/fr1_test_api/gwf_cts_flow_node_summary.csv" and "./verification/fr1_test_t_api/gwt_cts_node_summary.csv", the layer-row-column information for each CTS-associated WEL-type boundary is listed.  These should correspond with the layer-row-column information in the CTS input file ("./verification/fr1_test_t_api/model.cts")
 - Checking the flow-model extraction/injection rate balancing:  Inspecting the flow-model listing file ("./verification/fr1_test_api/gwf.lst"), users can check that the cumulative and incremental values for WEL "IN" and "OUT" for each stress period are within 0.0001 units.  Inspecting the CTS flow node summary, users can see the `requested_rate` and `actual_rate` for the extraction and injection wells.  The `actual_rate` should be less than the `requested_rate` and the absolute value for the `actual_rate` for extraction well and injection well should be within 0.0001 units.
-- Checking the transport-model treatment efficiency: Inspecting the transport-model listing file ("./verification/fr1_test_t_api/gwt.lst"), users should see that the simulated concentration for node 4 (the injection well location) should equal the extraction well concentration (node 2) with a value of 1.0; the simulated WEL "IN" mass should equal the simulated WEL "OUT" mass in the stress period 1 mass budget report.  For stress period 2, the simulated concentration for node 4 should equal 0.5 (half of the extraction concentration) and the WEL "IN" MASS rate should be half of the "OUT" mass rate in the mass budget report for stress period 2.  For stress period 3, the simulated concentration for node 4 should be near numerical zero and the WEL "IN" rate for stress period 3 should 0.0 in the mass budget report. 
+- Checking the transport-model treatment efficiency: Inspecting the transport-model listing file ("./verification/fr1_test_t_api/gwt.lst"), users should see that the simulated concentration for node 4 (the injection well location) should equal the extraction well concentration (node 2) with a value of 1.0; the simulated WEL "IN" mass should equal the simulated WEL "OUT" mass in the stress period 1 mass budget report.  For stress period 2, the simulated concentration for node 4 should equal 0.5 (half of the extraction concentration) and the WEL "IN" MASS rate should be half of the "OUT" mass rate in the mass budget report for stress period 2.  For stress period 3, the simulated concentration for node 4 should be near numerical zero and the WEL "IN" rate for stress period 3 should 0.0 in the mass budget report.
+
+
+## How it works - flow balancing
+
+- for each stress period
+    + for each time step
+        * for each solution iteration except the first 
+            - for each CTS instance
+                + get the requested extraction and injection rates for each WEL/MAW entry in this CTS
+                + get the corresponding last iteration simulated extraction and injection rates
+                + if the total simulated extraction rate is less than the total requested extraction rate, scale the requested injection rate for all injectors proportionally such that the total requested injection rate is equal to the total simulated extraction rate.
+                + reset the requested injection rate array pointer in memory so that the next iteration will use these rates
+        * once solution has converged or maximum number of iterations is reached, record CTS results to the node and system summary CSV files
+
+## How it works - treatment efficiency
+
+- for each stress period
+    + for each time step
+        * for each solution iteration
+            - for each CTS instance
+                + accumulate the mass removed by each extractor by summing the concentration time flow rate product
+                + apply the treatment efficiency by multiplying the requested treatment efficiency times the total mass removed by extractors to yield the mass removed by the treatment system and the mass to be injected
+                + sum the total injection volume as flow rate times time-step length for all injectors
+                + calculate the injection concentration as injection mass divided by total injection volume
+                + reset the injection well concentration array pointer in memory so that the next iteration will use the injection concentration
+        * Once the solution has converged or the maximum  number of iterations is reached, record the CTS results in the node and system summary CSV files 
+
 
