@@ -523,6 +523,11 @@ class Mf6Cts(object):
 
         """
 
+        if record:
+            # reset the node tracking containers
+            self._cts_node_record_dict = {}
+            self._cts_current_nodes = []
+
         # for each cts system
         for cts_num, cts_instance in self._cts_instances.items():
 

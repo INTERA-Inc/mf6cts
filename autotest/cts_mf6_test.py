@@ -26,7 +26,7 @@ else:
 
 sys.path.append(os.path.join("..", "mf6cts"))
 
-nrowncol = 333
+nrowncol = 33
 # number of layers
 NLAY = 3
 
@@ -2995,7 +2995,11 @@ def fr1_test():
     api_inc, api_cum = api_lst.get_dataframes(diff=False)
     print(api_cum.iloc[-1, :])
 
+    node_df = pd.read_csv(os.path.join(sim_ws, "gwf_cts_flow_node_summary.csv"))
+    assert node_df.shape[0] == 6
+
     node_df = pd.read_csv(os.path.join(simt_ws, "gwt_cts_node_summary.csv"))
+    assert node_df.shape[0] == 6
     in_node_mass = node_df.loc[
                    node_df.apply(lambda x: x.cum_vol > 0 and x.stress_period == 1, axis=1),
                    :].cum_mass.sum()
@@ -3054,8 +3058,8 @@ def fr1_test():
 
 
 if __name__ == "__main__":
-    #fr1_test()
-    test_five_spotish_simple_api1()
+    fr1_test()
+    #test_five_spotish_simple_api1()
     # test_five_spotish_simple_api2()
     # plot("fivespotsimple_t", "fivespotsimple")
     # plot("fivespotsimple_t_api", "fivespotsimple_api")
